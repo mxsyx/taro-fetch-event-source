@@ -1,0 +1,19 @@
+{
+  "name": "taro-fetch-event-source",
+  "description": "适用于 Taro.js 的 SSE 库",
+  "keywords": [
+    "taro",
+    "fetch",
+    "sse"
+  ],
+  "main": "lib/index.js",
+  "module": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@tarojs/taro": "^4.1.7",
+    "typescript": "^5.9.2"
+  }
+}
