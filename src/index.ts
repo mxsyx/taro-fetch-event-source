@@ -5,6 +5,84 @@ export const EventStreamContentType = "text/event-stream";
 const DefaultRetryInterval = 1000;
 const LastEventId = "last-event-id";
 
+function uint8ArrayToUtf8(uint8Array: Uint8Array) {
+  let result = "";
+  let i = 0;
+  const len = uint8Array.length;
+
+  while (i < len) {
+    const byte = uint8Array[i];
+
+    // 单字节字符 (0xxxxxxx)
+    if (byte < 0x80) {
+      result += String.fromCharCode(byte);
+      i++;
+    }
+    // 双字节字符 (110xxxxx 10xxxxxx)
+    else if (byte >= 0xc2 && byte <= 0xdf) {
+      if (i + 1 >= len) break; // 防止越界
+      const byte2 = uint8Array[i + 1];
+      if ((byte2 & 0xc0) !== 0x80) break; // 检查是否为 10xxxxxx
+      const codepoint = ((byte & 0x1f) << 6) | (byte2 & 0x3f);
+      result += String.fromCharCode(codepoint);
+      i += 2;
+    }
+    // 三字节字符 (1110xxxx 10xxxxxx 10xxxxxx)
+    else if (byte >= 0xe0 && byte <= 0xef) {
+      if (i + 2 >= len) break;
+      const byte2 = uint8Array[i + 1];
+      const byte3 = uint8Array[i + 2];
+      if ((byte2 & 0xc0) !== 0x80 || (byte3 & 0xc0) !== 0x80) break;
+      const codepoint =
+        ((byte & 0x0f) << 12) | ((byte2 & 0x3f) << 6) | (byte3 & 0x3f);
+      // UTF-16 编码（JavaScript 内部使用 UTF-16）
+      if (codepoint < 0xd800 || codepoint >= 0xe000) {
+        result += String.fromCharCode(codepoint);
+      } else {
+        // 代理对范围，但三字节不会产生代理对，直接输出
+        result += String.fromCharCode(codepoint);
+      }
+      i += 3;
+    }
+    // 四字节字符 (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx) —— 用于 emoji 等
+    else if (byte >= 0xf0 && byte <= 0xf4) {
+      if (i + 3 >= len) break;
+      const byte2 = uint8Array[i + 1];
+      const byte3 = uint8Array[i + 2];
+      const byte4 = uint8Array[i + 3];
+      if (
+        (byte2 & 0xc0) !== 0x80 ||
+        (byte3 & 0xc0) !== 0x80 ||
+        (byte4 & 0xc0) !== 0x80
+      )
+        break;
+
+      let codepoint =
+        ((byte & 0x07) << 18) |
+        ((byte2 & 0x3f) << 12) |
+        ((byte3 & 0x3f) << 6) |
+        (byte4 & 0x3f);
+
+      // 超出 BMP（Basic Multilingual Plane）的字符需转为 UTF-16 代理对
+      if (codepoint > 0xffff) {
+        codepoint -= 0x10000;
+        const highSurrogate = 0xd800 + (codepoint >> 10);
+        const lowSurrogate = 0xdc00 + (codepoint & 0x3ff);
+        result += String.fromCharCode(highSurrogate, lowSurrogate);
+      } else {
+        result += String.fromCharCode(codepoint);
+      }
+      i += 4;
+    }
+    // 无效字节，跳过（或可替换为 ）
+    else {
+      i++;
+    }
+  }
+
+  return result;
+}
+
 export interface FetchEventSourceInit {
   /** 请求头 */
   headers?: Record<string, string>;
@@ -226,8 +304,7 @@ export function fetchEventSource(
 
       // 将 ArrayBuffer 转换为字符串
       let text = "";
-      const decoder = new TextDecoder("utf-8");
-      text = decoder.decode(uint8Array);
+      text = uint8ArrayToUtf8(uint8Array);
 
       // 将新数据添加到 buffer
       buffer += text;
