@@ -6,7 +6,7 @@
 > 使用方式与 Microsoft 的 [fetch-event-source](https://github.com/Azure/fetch-event-source) 库相同
 
 ```js
-import { fetchEventSource } from "./taro-fetch-event-source";
+import { fetchEventSource } from "taro-fetch-event-source";
 
 const controller = fetchEventSource("https://api.example.com/sse", {
   method: "POST",
