@@ -1,5 +1,6 @@
 {
   "name": "taro-fetch-event-source",
+  "version": "1.0.0",
   "description": "适用于 Taro.js 的 SSE 库",
   "keywords": [
     "taro",
