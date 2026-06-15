@@ -97,7 +97,7 @@ export interface FetchEventSourceInit {
    * 连接成功时的回调
    */
   onopen?: (
-    response: Taro.request.SuccessCallbackResult
+    response: Taro.request.SuccessCallbackResult,
   ) => void | Promise<void>;
 
   /**
@@ -138,6 +138,15 @@ export interface EventSourceMessage {
   data: string;
 }
 
+export interface AbortSignal {
+  aborted: boolean;
+}
+
+export interface AbortController {
+  abort: () => void;
+  signal: AbortSignal;
+}
+
 class FatalError extends Error {}
 
 export function fetchEventSource(
@@ -153,8 +162,8 @@ export function fetchEventSource(
     openWhenHidden = false,
     maxRetryCount,
     timeout = 300000,
-  }: FetchEventSourceInit
-): { abort: () => void } {
+  }: FetchEventSourceInit,
+): AbortController {
   let requestTask: Taro.RequestTask<any> | null = null;
   let retryCount = 0;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -374,5 +383,5 @@ export function fetchEventSource(
   // 开始连接
   connect();
 
-  return { abort };
+  return { abort, signal: { aborted: false } };
 }
